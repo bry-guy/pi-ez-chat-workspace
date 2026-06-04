@@ -1,67 +1,70 @@
 # pi-ez-chat-workspace
 
-`pi-ez-chat-workspace` binds a pi-chat conversation to a global workspace config and reapplies that workspace on demand.
+## What it does
 
-It is a tiny orchestrator with a plugin registry. Built-in plugins support `git`, `mounts`, `ssh`, and limited `net`; third-party pi extensions can register additional profile sections.
+Binds a pi-chat conversation to a workspace config file and applies it to the connected conversation.
 
-Run `/chat-connect` first.
+## Why it exists
 
-## Commands
+Setting up git, mounts, ssh, and net by hand for every pi-chat conversation gets tedious fast. A workspace describes that setup once and reapplies it on demand.
 
-```text
-/chat-workspace status
-/chat-workspace bind [name]
-/chat-workspace unbind
-/chat-workspace apply [--dry-run] [--no-reload]
-```
+## How to use it
 
-- `status` shows the connected conversation's binding and last apply.
-- `bind foo` binds the conversation to `foo-config.json` and applies it.
-- `bind` or `unbind` uses the default `config.json` workspace.
-- `apply` reapplies the currently bound workspace. If you manually changed downstream state, for example with `/chat-unmount`, `apply` restores what the bound workspace declares.
+New to pi-ez-chat? Start with the [user guide](docs/user-guide.md).
 
-## Config files
+Workspace configs live at `~/.pi/agent/chat-workspace/`:
 
-Workspace configs live with the other `pi-ez-chat-*` global agent config:
+- `config.json` is the default workspace
+- `<name>-config.json` is a named workspace, for example `sideproj-config.json`
+- `bindings.json` records which workspace each conversation uses
 
-```text
-~/.pi/agent/chat-workspace/
-├── config.json              # default workspace
-├── foo-config.json          # named workspace "foo"
-├── bindings.json            # conversation id -> workspace name
-├── last-apply.json
-└── debug.log
-```
-
-This intentionally differs from `pi-ez-worktree`, which uses repo-local `.ez-worktree.json` and `.pi-ez-worktree.json` because worktree config is repository-scoped.
-
-Default `config.json` example:
+A workspace file looks like this:
 
 ```json
 {
   "description": "Default workspace",
   "git": {
     "enabled": true,
-    "identity": "Ada Lovelace <ada@example.com>",
-    "noSsh": false
+    "identity": "Ada Lovelace <ada@example.com>"
   },
   "mounts": [
-    { "target": "owner/repo", "mode": "rw" }
+    { "target": "bry-guy/pi-ez-chat-workspace", "mode": "rw" }
   ],
   "ssh": {
     "hosts": [
-      { "alias": "example-a", "address": "10.0.0.10", "user": "root", "port": 22 }
+      { "alias": "lab-a", "address": "10.0.0.10", "user": "root", "port": 22 }
     ]
-  },
-  "postApplyMessage": "Optional reminder shown after apply"
+  }
 }
 ```
 
-Only `description` and `postApplyMessage` are reserved. Every other top-level key is a plugin section. Profiles must not contain secrets.
+`description` and `postApplyMessage` are reserved. Every other top-level key is a plugin section. Workspaces do not store secrets.
+
+Connect a conversation first with `/chat-connect`, then use these commands:
+
+- `/chat-workspace status` shows the binding and last apply for the connected conversation.
+
+  ```text
+  /chat-workspace status
+  ```
+
+- `/chat-workspace bind [name]` binds the conversation to a workspace and applies it. With no name, binds to the default workspace.
+
+  ```text
+  /chat-workspace bind sideproj
+  /chat-workspace bind
+  ```
+
+- `/chat-workspace apply` reapplies the currently bound workspace. Useful after manual changes like `/chat-unmount`.
+
+  ```text
+  /chat-workspace apply
+  /chat-workspace apply --dry-run
+  ```
 
 ## Plugin API
 
-Third-party extensions can register sections with the minimal SDK:
+Third-party extensions can add workspace sections through a small SDK.
 
 ```ts
 import { registerWorkspacePlugin } from "pi-ez-chat-workspace/sdk";
@@ -69,14 +72,12 @@ import { registerWorkspacePlugin } from "pi-ez-chat-workspace/sdk";
 registerWorkspacePlugin({
   name: "mySection",
   async apply(ctx) {
-    // ctx: { workspaceName, conversationId, cwd, dryRun, config }
     return {
       changed: false,
       restartRequired: false,
       summary: ["mySection: ok"],
-      warnings: []
     };
-  }
+  },
 });
 ```
 
@@ -88,10 +89,4 @@ A workspace can then include:
 }
 ```
 
-Plugins own validation, writes, and idempotency for their section. Workspace aggregates summaries, writes `last-apply.json`, and schedules one restart if any plugin returns `restartRequired: true`.
-
-## Deferred
-
-Threads should inherit their parent chat's binding, but automatic parent detection is deferred until pi-chat exposes a stable parent id. For now, bind each conversation explicitly when needed.
-
-Also deferred: project-local profiles, per-project discovery, profile inheritance, overlays, pruning, and mutating workspace configs from commands such as `/chat-mount` or `/chat-unmount`.
+Plugins own validation and writes for their section. Workspace aggregates summaries, writes `last-apply.json`, and reloads the VM once when needed.
