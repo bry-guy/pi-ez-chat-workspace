@@ -4,6 +4,7 @@ import { join } from "node:path";
 export const CHAT_WORKSPACE_DIR = join(homedir(), ".pi", "agent", "chat-workspace");
 export const CONFIG_JSON_PATH = join(CHAT_WORKSPACE_DIR, "config.json");
 export const LAST_APPLY_JSON_PATH = join(CHAT_WORKSPACE_DIR, "last-apply.json");
+export const BINDINGS_JSON_PATH = join(CHAT_WORKSPACE_DIR, "bindings.json");
 export const DEBUG_LOG_PATH = join(CHAT_WORKSPACE_DIR, "debug.log");
 
 export const CHAT_GIT_DIR = join(homedir(), ".pi", "agent", "chat-git");

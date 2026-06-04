@@ -1,48 +1,63 @@
 # pi-ez-chat-workspace
 
-`pi-ez-chat-workspace` applies a named global workspace profile to the current connected pi-chat conversation.
+`pi-ez-chat-workspace` binds a pi-chat conversation to a global workspace config and reapplies that workspace on demand.
 
 It is a tiny orchestrator with a plugin registry. Built-in plugins support `git`, `mounts`, `ssh`, and limited `net`; third-party pi extensions can register additional profile sections.
 
-## Command
-
-```text
-/chat-workspace apply <name> [--dry-run] [--no-reload]
-```
-
 Run `/chat-connect` first.
 
-## Config
+## Commands
 
-Create `~/.pi/agent/chat-workspace/config.json`:
+```text
+/chat-workspace status
+/chat-workspace bind [name]
+/chat-workspace unbind
+/chat-workspace apply [--dry-run] [--no-reload]
+```
+
+- `status` shows the connected conversation's binding and last apply.
+- `bind foo` binds the conversation to `foo-config.json` and applies it.
+- `bind` or `unbind` uses the default `config.json` workspace.
+- `apply` reapplies the currently bound workspace. If you manually changed downstream state, for example with `/chat-unmount`, `apply` restores what the bound workspace declares.
+
+## Config files
+
+Workspace configs live with the other `pi-ez-chat-*` global agent config:
+
+```text
+~/.pi/agent/chat-workspace/
+├── config.json              # default workspace
+├── foo-config.json          # named workspace "foo"
+├── bindings.json            # conversation id -> workspace name
+├── last-apply.json
+└── debug.log
+```
+
+This intentionally differs from `pi-ez-worktree`, which uses repo-local `.ez-worktree.json` and `.pi-ez-worktree.json` because worktree config is repository-scoped.
+
+Default `config.json` example:
 
 ```json
 {
-  "workspaces": {
-    "example": {
-      "description": "Example generic workspace",
-      "git": {
-        "enabled": true,
-        "identity": "Ada Lovelace <ada@example.com>",
-        "noSsh": false
-      },
-      "mounts": [
-        { "target": "owner/repo", "mode": "rw" }
-      ],
-      "ssh": {
-        "hosts": [
-          { "alias": "example-a", "address": "10.0.0.10", "user": "root", "port": 22 }
-        ]
-      },
-      "postApplyMessage": "Optional reminder shown after apply"
-    }
-  }
+  "description": "Default workspace",
+  "git": {
+    "enabled": true,
+    "identity": "Ada Lovelace <ada@example.com>",
+    "noSsh": false
+  },
+  "mounts": [
+    { "target": "owner/repo", "mode": "rw" }
+  ],
+  "ssh": {
+    "hosts": [
+      { "alias": "example-a", "address": "10.0.0.10", "user": "root", "port": 22 }
+    ]
+  },
+  "postApplyMessage": "Optional reminder shown after apply"
 }
 ```
 
-Only `description` and `postApplyMessage` are reserved. Every other top-level profile key is a plugin section.
-
-Profiles must not contain secrets.
+Only `description` and `postApplyMessage` are reserved. Every other top-level key is a plugin section. Profiles must not contain secrets.
 
 ## Plugin API
 
@@ -69,16 +84,14 @@ A workspace can then include:
 
 ```json
 {
-  "workspaces": {
-    "example": {
-      "mySection": { "enabled": true }
-    }
-  }
+  "mySection": { "enabled": true }
 }
 ```
 
-Plugins own validation and writes for their section. Workspace aggregates summaries, writes `last-apply.json`, and prints the shared ``Restart via `/new` for changes to take effect.`` hint if any plugin returns `restartRequired: true`. (Workspace used to schedule a tmux pane respawn here; that path was removed because it killed the user's pi session whenever the connected pane was not a managed pi-chat worker. See [`pi-ez-lib/wishlist.md`](https://github.com/bry-guy/pi-ez-lib/blob/main/wishlist.md) §1 for the upstream extension API we need to do this in place.)
+Plugins own validation, writes, and idempotency for their section. Workspace aggregates summaries, writes `last-apply.json`, and schedules one restart if any plugin returns `restartRequired: true`.
 
 ## Deferred
 
-v1 intentionally defers `list`, `show`, `doctor`, project-local profiles, per-project discovery, profile inheritance, overlays, pruning, and ownership tracking beyond simple plugin-owned idempotent merges.
+Threads should inherit their parent chat's binding, but automatic parent detection is deferred until pi-chat exposes a stable parent id. For now, bind each conversation explicitly when needed.
+
+Also deferred: project-local profiles, per-project discovery, profile inheritance, overlays, pruning, and mutating workspace configs from commands such as `/chat-mount` or `/chat-unmount`.

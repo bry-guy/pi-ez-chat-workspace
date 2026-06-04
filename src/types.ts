@@ -6,10 +6,6 @@ export type WorkspaceProfile = {
   sections: Record<string, unknown>;
 };
 
-export type WorkspaceConfig = {
-  workspaces: Record<string, WorkspaceProfile>;
-};
-
 export type WorkspaceApplyContext = {
   workspaceName: string;
   conversationId: string;
@@ -30,9 +26,18 @@ export type WorkspacePlugin = {
   apply(ctx: WorkspaceApplyContext): WorkspacePluginResult | Promise<WorkspacePluginResult>;
 };
 
+export type WorkspaceBinding = {
+  name: string;
+  at: string;
+  inheritedFrom?: string;
+};
+
+export type WorkspaceBindings = Record<string, WorkspaceBinding>;
+
 export type LastApplyState = {
   conversationId: string;
   profile: string;
+  workspaceFile: string;
   at: string;
   summary: Record<string, unknown>;
   warnings: string[];

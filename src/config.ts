@@ -1,8 +1,9 @@
 import { readFile } from "node:fs/promises";
-import { CONFIG_JSON_PATH } from "./paths.js";
-import type { WorkspaceConfig, WorkspaceProfile } from "./types.js";
+import { join } from "node:path";
+import { CHAT_WORKSPACE_DIR, CONFIG_JSON_PATH } from "./paths.js";
+import type { WorkspaceProfile } from "./types.js";
 
-const PROFILE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+const SLUG = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const RESERVED = new Set(["description", "postApplyMessage"]);
 const SECRET_KEYS = /(?:secret|token|password|passwd|privatekey|private_key|apikey|api_key|credential)/i;
 
@@ -30,50 +31,50 @@ export function parseIdentity(input: string) {
   return { name: match[1].trim(), email: match[2].trim() };
 }
 
-function validateProfile(raw: unknown, name: string): WorkspaceProfile {
-  const profile = asRecord(raw, `workspaces.${name}`);
+export function normalizeWorkspaceName(name: string | undefined): string {
+  const normalized = (name || "default").trim() || "default";
+  if (!SLUG.test(normalized)) throw new Error(`invalid workspace name: ${normalized}`);
+  return normalized;
+}
+
+export function workspaceConfigPath(name?: string): string {
+  const normalized = normalizeWorkspaceName(name);
+  return normalized === "default" ? CONFIG_JSON_PATH : join(CHAT_WORKSPACE_DIR, `${normalized}-config.json`);
+}
+
+export function parseWorkspaceProfile(parsed: unknown): WorkspaceProfile {
+  rejectSecretKeys(parsed);
+  const profile = asRecord(parsed, "workspace config");
+  if (profile.workspaces !== undefined) {
+    throw new Error('workspace config files now describe one workspace directly; remove the top-level "workspaces" wrapper');
+  }
+
   const result: WorkspaceProfile = { sections: {} };
   if (profile.description !== undefined) {
-    if (typeof profile.description !== "string") throw new Error(`workspaces.${name}.description must be a string`);
+    if (typeof profile.description !== "string") throw new Error("description must be a string");
     result.description = profile.description;
   }
   if (profile.postApplyMessage !== undefined) {
-    if (typeof profile.postApplyMessage !== "string") throw new Error(`workspaces.${name}.postApplyMessage must be a string`);
+    if (typeof profile.postApplyMessage !== "string") throw new Error("postApplyMessage must be a string");
     result.postApplyMessage = profile.postApplyMessage;
   }
   for (const [key, value] of Object.entries(profile)) {
     if (RESERVED.has(key)) continue;
-    if (!PROFILE_NAME.test(key)) throw new Error(`invalid workspace section name in ${name}: ${key}`);
+    if (!SLUG.test(key)) throw new Error(`invalid workspace section name: ${key}`);
     result.sections[key] = value;
   }
   return result;
 }
 
-export function parseWorkspaceConfig(parsed: unknown): WorkspaceConfig {
-  rejectSecretKeys(parsed);
-  const root = asRecord(parsed, "config");
-  const workspaces = asRecord(root.workspaces, "workspaces");
-  const result: WorkspaceConfig = { workspaces: {} };
-  for (const [name, rawProfile] of Object.entries(workspaces)) {
-    if (!PROFILE_NAME.test(name)) throw new Error(`invalid workspace profile name: ${name}`);
-    result.workspaces[name] = validateProfile(rawProfile, name);
-  }
-  return result;
-}
-
-export async function loadWorkspaceConfig(path = CONFIG_JSON_PATH): Promise<WorkspaceConfig> {
+export async function loadWorkspaceProfile(name?: string): Promise<{ name: string; path: string; profile: WorkspaceProfile }> {
+  const normalized = normalizeWorkspaceName(name);
+  const path = workspaceConfigPath(normalized);
   try {
-    return parseWorkspaceConfig(JSON.parse(await readFile(path, "utf8")));
+    return { name: normalized, path, profile: parseWorkspaceProfile(JSON.parse(await readFile(path, "utf8"))) };
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      throw new Error(`No chat-workspace config found at ${path}. Create it with a top-level { "workspaces": { ... } } object.`);
+      throw new Error(`No chat-workspace config found for ${normalized} at ${path}.`);
     }
     throw error;
   }
-}
-
-export function getProfile(config: WorkspaceConfig, name: string): WorkspaceProfile {
-  const profile = config.workspaces[name];
-  if (!profile) throw new Error(`No workspace profile named ${name}.`);
-  return profile;
 }
