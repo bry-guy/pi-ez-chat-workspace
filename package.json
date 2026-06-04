@@ -1,0 +1,45 @@
+{
+  "name": "pi-ez-chat-workspace",
+  "version": "0.1.0",
+  "description": "pi-chat extension that applies reusable workspace profiles across pi-ez-chat extensions.",
+  "license": "MIT",
+  "type": "module",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "pi-chat",
+    "workspace"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bry-guy/pi-ez-chat-workspace.git"
+  },
+  "homepage": "https://github.com/bry-guy/pi-ez-chat-workspace#readme",
+  "bugs": {
+    "url": "https://github.com/bry-guy/pi-ez-chat-workspace/issues"
+  },
+  "exports": {
+    ".": "./index.ts",
+    "./sdk": "./src/sdk.ts"
+  },
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  },
+  "scripts": {
+    "test": "tsx --test test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "pi-ez-lib": "https://github.com/bry-guy/pi-ez-lib/archive/refs/tags/v0.1.6.tar.gz"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.21",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
