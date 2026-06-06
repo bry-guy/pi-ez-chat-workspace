@@ -1,12 +1,4 @@
-export function matchSlashCommand(text: string, names: string[]): { name: string; args: string } | undefined {
-  const trimmed = text.trim();
-  if (!trimmed.startsWith("/")) return undefined;
-  const match = trimmed.match(/^\/([^\s]+)(?:\s+([\s\S]*))?$/);
-  if (!match) return undefined;
-  const name = match[1];
-  if (!names.includes(name)) return undefined;
-  return { name, args: match[2] ?? "" };
-}
+export { matchSlashCommand, normalizeRemoteCommandText, stripLeadingMention, stripTrailingMention, stripTranscriptPrefix, type CommandMatch } from "pi-ez-lib";
 
 export function fenced(text: string): string {
   return `\`\`\`\n${text.replace(/```/g, "`​``")}\n\`\`\``;

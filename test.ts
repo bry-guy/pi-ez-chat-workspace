@@ -5,6 +5,7 @@ import { parseApplyArgs } from "./src/apply.js";
 import { normalizeWorkspaceName, parseWorkspaceProfile, workspaceConfigPath } from "./src/config.js";
 import { getPersistedConversationId } from "./src/conversation.js";
 import { getWorkspacePlugin, registerWorkspacePlugin } from "./src/sdk.js";
+import { matchSlashCommand } from "./src/match.js";
 
 test("parses valid workspace profile", () => {
   const profile = parseWorkspaceProfile({
@@ -55,4 +56,19 @@ test("parses apply args", () => {
 test("registers workspace plugins globally", () => {
   registerWorkspacePlugin({ name: "unitTestPlugin", apply: () => ({ summary: ["ok"] }) });
   assert.equal(getWorkspacePlugin("unitTestPlugin")?.name, "unitTestPlugin");
+});
+
+test("matches mention-prefixed and transcript-wrapped remote slash commands", () => {
+  assert.deepEqual(matchSlashCommand("/chat-workspace apply", ["chat-workspace"]), { name: "chat-workspace", args: "apply" });
+  assert.deepEqual(matchSlashCommand("<@1496161074997624843> /chat-workspace apply", ["chat-workspace"]), {
+    name: "chat-workspace",
+    args: "apply",
+  });
+  assert.deepEqual(
+    matchSlashCommand(
+      "- [2026-06-06T04:57:24.428Z] [uid:235246238382030849] prettybry: <@1496161074997624843> /chat-workspace apply",
+      ["chat-workspace"],
+    ),
+    { name: "chat-workspace", args: "apply" },
+  );
 });
