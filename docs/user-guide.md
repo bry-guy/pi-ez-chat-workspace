@@ -82,7 +82,7 @@ You need pi installed locally and a Discord bot wired up through pi-chat. After 
        "identity": "Ada Lovelace <ada@example.com>"
      },
      "mounts": [
-       { "target": "bry-guy/pi-ez-chat-workspace", "mode": "rw" }
+       { "target": "bry-guy/pi-ez-chat-workspace", "mode": "rw", "includeNodeModules": false }
      ]
    }
    ```
@@ -245,6 +245,7 @@ Reapply and restart the VM. Calls to other hosts will be blocked.
 - Threads inherit mounts and git config at the moment they start. Later changes to the parent do not propagate to existing threads.
 - Workspace does not store secrets. SSH keys live in `chat-ssh`. API tokens live in your own broker.
 - `/chat-mount`, `/chat-unmount`, and similar commands change downstream state. They do not edit your workspace config. Reapply with `/chat-workspace apply` to restore what the workspace declares.
+- Mount entries default to excluding `node_modules`; set `includeNodeModules: true` per mount only when host dependencies are intentionally needed.
 - The chat-net allowlist is conservative by design. Broaden it deliberately.
 
 ## Troubleshooting

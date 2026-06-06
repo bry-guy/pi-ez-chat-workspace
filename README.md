@@ -28,7 +28,7 @@ A workspace file looks like this:
     "identity": "Ada Lovelace <ada@example.com>"
   },
   "mounts": [
-    { "target": "bry-guy/pi-ez-chat-workspace", "mode": "rw" }
+    { "target": "bry-guy/pi-ez-chat-workspace", "mode": "rw", "includeNodeModules": false }
   ],
   "ssh": {
     "hosts": [
@@ -90,3 +90,5 @@ A workspace can then include:
 ```
 
 Plugins own validation and writes for their section. Workspace aggregates summaries, writes `last-apply.json`, and reloads the VM once when needed.
+
+Mount entries may set `includeNodeModules: true` when a workspace intentionally needs host dependencies; omitted values default to `false`.

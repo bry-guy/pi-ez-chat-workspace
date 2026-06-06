@@ -7,11 +7,11 @@ import { CHAT_MOUNT_CONFIG_JSON_PATH, CHAT_MOUNT_MOUNTS_JSON_PATH } from "../pat
 import { readJson, writeJson } from "../json.js";
 import type { WorkspaceApplyContext, WorkspacePlugin, WorkspacePluginResult } from "../types.js";
 
-type WorkspaceMount = { target: string; mode?: "rw" | "ro" };
+type WorkspaceMount = { target: string; mode?: "rw" | "ro"; includeNodeModules?: boolean };
 
 const execFileAsync = promisify(execFile);
 
-type MountEntry = { hostPath: string; mode: "rw" | "ro" };
+type MountEntry = { hostPath: string; mode: "rw" | "ro"; includeNodeModules?: boolean };
 type MountStore = Record<string, Record<string, MountEntry>>;
 type MountConfig = { sourceDir?: string; sourceDirs?: string[]; defaultForge?: "github" | "gitlab" | "bitbucket"; cloneMode?: "full" | "shallow" };
 type Target = { kind: "path" | "name" | "repo"; slug: string; cloneUrl?: string; ref?: string };
@@ -112,7 +112,7 @@ async function resolveHostPath(rawTarget: string, options: WorkspaceApplyContext
 }
 
 function equalMount(a: MountEntry, b: MountEntry): boolean {
-  return a.hostPath === b.hostPath && a.mode === b.mode;
+  return a.hostPath === b.hostPath && a.mode === b.mode && Boolean(a.includeNodeModules) === Boolean(b.includeNodeModules);
 }
 
 function parseMounts(raw: unknown): WorkspaceMount[] {
@@ -122,7 +122,8 @@ function parseMounts(raw: unknown): WorkspaceMount[] {
     const mount = entry as WorkspaceMount;
     if (typeof mount.target !== "string" || !mount.target.trim()) throw new Error(`mounts[${index}].target must be a non-empty string`);
     if (mount.mode !== undefined && mount.mode !== "rw" && mount.mode !== "ro") throw new Error(`mounts[${index}].mode must be rw or ro`);
-    return { target: mount.target.trim(), mode: mount.mode ?? "rw" };
+    if (mount.includeNodeModules !== undefined && typeof mount.includeNodeModules !== "boolean") throw new Error(`mounts[${index}].includeNodeModules must be boolean`);
+    return { target: mount.target.trim(), mode: mount.mode ?? "rw", includeNodeModules: Boolean(mount.includeNodeModules) };
   });
 }
 
@@ -137,10 +138,10 @@ async function applyMountsConfig(mounts: WorkspaceMount[], options: WorkspaceApp
   for (const mount of mounts) {
     const resolved = await resolveHostPath(mount.target, options);
     const guestPath = deriveGuestPath(resolved.hostPath);
-    const entry: MountEntry = { hostPath: resolved.hostPath, mode: mount.mode ?? "rw" };
+    const entry: MountEntry = { hostPath: resolved.hostPath, mode: mount.mode ?? "rw", includeNodeModules: Boolean(mount.includeNodeModules) };
     const existing = conversationMounts[guestPath];
     if (existing && !equalMount(existing, entry)) {
-      warnings.push(`Mount ${guestPath} already exists for ${options.conversationId}: ${existing.hostPath} (${existing.mode}); leaving unchanged.`);
+      warnings.push(`Mount ${guestPath} already exists for ${options.conversationId}: ${existing.hostPath} (${existing.mode}, ${existing.includeNodeModules ? "node_modules included" : "node_modules excluded"}); leaving unchanged.`);
       continue;
     }
     configured++;
