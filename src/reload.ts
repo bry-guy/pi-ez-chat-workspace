@@ -1,23 +1,7 @@
-import { spawnSync } from "node:child_process";
+import { scheduleCurrentPiChatWorkerRespawn, type RestartScheduleResult } from "pi-ez-lib";
 
-export type RestartScheduleResult = { scheduled: boolean; message: string };
+import type { CommandContext } from "./types.js";
 
-function shellQuote(value: string): string {
-  return `'${value.replace(/'/g, `'"'"'`)}'`;
-}
-
-export function scheduleCurrentTmuxPaneRespawn(delaySeconds = 1): RestartScheduleResult {
-  const pane = process.env.TMUX_PANE;
-  if (!pane) return { scheduled: false, message: "Gondolin VM must be restarted." };
-  const delay = Math.max(1, delaySeconds);
-  const script = `sleep ${delay}; tmux respawn-pane -k -t ${shellQuote(pane)}`;
-  const result = spawnSync("tmux", ["run-shell", "-b", script], { encoding: "utf8" });
-  if (result.error || result.status !== 0) {
-    const stderr = result.stderr?.trim();
-    return {
-      scheduled: false,
-      message: `Gondolin VM must be restarted. Auto-restart failed: ${stderr || result.error?.message || `tmux exited ${result.status}`}`,
-    };
-  }
-  return { scheduled: true, message: "Restarting Gondolin VM." };
+export function scheduleCurrentWorkerRespawn(ctx: CommandContext, delaySeconds = 3): RestartScheduleResult {
+  return scheduleCurrentPiChatWorkerRespawn(ctx, { delaySeconds });
 }

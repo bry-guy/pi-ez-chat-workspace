@@ -1,7 +1,7 @@
 import { effectiveWorkspaceName, setBinding } from "./bindings.js";
 import { loadWorkspaceProfile, normalizeWorkspaceName } from "./config.js";
 import { requireConversationId } from "./conversation.js";
-import { scheduleCurrentTmuxPaneRespawn } from "./reload.js";
+import { scheduleCurrentWorkerRespawn } from "./reload.js";
 import { writeLastApply } from "./storage.js";
 import { getWorkspacePlugin } from "./sdk.js";
 import type { CommandContext, LastApplyState, WorkspacePluginResult } from "./types.js";
@@ -91,7 +91,7 @@ async function applyResolvedWorkspace(
       lines.push("Gondolin VM must be restarted. Skipped auto-reload because --no-reload was set.");
     }
   } else if (restartRequired) {
-    const restart = scheduleCurrentTmuxPaneRespawn(3);
+    const restart = scheduleCurrentWorkerRespawn(ctx, 3);
     lines.push("");
     lines.push(restart.message);
   }
