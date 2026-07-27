@@ -13,9 +13,10 @@ test("parses valid workspace profile", () => {
     git: { enabled: true, identity: "Ada Lovelace <ada@example.com>", noSsh: false },
     mounts: [{ target: "owner/repo", mode: "ro" }],
     ssh: { hosts: [{ alias: "host-a", address: "10.0.0.1", user: "root", port: 22 }] },
+    secrets: { github: { kind: "github-app-token", repos: ["bry-guy/pi-ez-chat-workspace"] }, env: { ANTHROPIC_API_KEY: { kind: "op-read", ref: "op://Private/Anthropic/credential" } } },
   });
   assert.equal((profile.sections.mounts as Array<{ mode: string }>)[0].mode, "ro");
-  assert.deepEqual(Object.keys(profile.sections).sort(), ["git", "mounts", "ssh"]);
+  assert.deepEqual(Object.keys(profile.sections).sort(), ["git", "mounts", "secrets", "ssh"]);
 });
 
 test("rejects old workspaces wrapper", () => {

@@ -92,3 +92,29 @@ A workspace can then include:
 Plugins own validation and writes for their section. Workspace aggregates summaries, writes `last-apply.json`, and reloads the VM once when needed.
 
 Mount entries may set `includeNodeModules: true` when a workspace intentionally needs host dependencies; omitted values default to `false`.
+
+## Broker-backed GitHub and 1Password secrets
+
+Workspace profiles can declare broker-backed credentials without storing secret values:
+
+```json
+{
+  "git": {
+    "auth": {
+      "type": "github-app",
+      "repos": ["bry-guy/pi-ez-chat-workspace"]
+    }
+  },
+  "secrets": {
+    "github": {
+      "kind": "github-app-token",
+      "repos": ["bry-guy/pi-ez-chat-workspace"]
+    },
+    "env": {
+      "ANTHROPIC_API_KEY": { "kind": "op-read", "ref": "op://Private/Anthropic API/credential" }
+    }
+  }
+}
+```
+
+`git.auth.type = github-app` switches `pi-ez-chat-git` to brokered GitHub App HTTPS auth. The `secrets` section updates `pi-ez-secret-broker` allowlists for GitHub repos and explicit `op://...` refs.

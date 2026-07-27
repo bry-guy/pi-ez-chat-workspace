@@ -19,6 +19,7 @@ function rejectSecretKeys(value: unknown, path = "config"): void {
     return;
   }
   for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+    if (path === "config" && key === "secrets") continue;
     if (SECRET_KEYS.test(key)) throw new Error(`${path}.${key} looks like a secret field; workspace profiles must not store secrets`);
     rejectSecretKeys(child, `${path}.${key}`);
   }

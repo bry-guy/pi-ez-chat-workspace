@@ -6,6 +6,7 @@ import { gitPlugin } from "./src/adapters/git.js";
 import { mountsPlugin } from "./src/adapters/mount.js";
 import { netPlugin } from "./src/adapters/net.js";
 import { sshPlugin } from "./src/adapters/ssh.js";
+import { secretsPlugin } from "./src/adapters/secrets.js";
 
 function notice(ctx: { ui: { notify(message: string, level?: NotifyLevel): void } }, message: string, level: NotifyLevel = "info") {
   ctx.ui.notify(message, level);
@@ -16,6 +17,7 @@ export default function (pi: ExtensionAPI) {
   registerWorkspacePlugin(mountsPlugin);
   registerWorkspacePlugin(netPlugin);
   registerWorkspacePlugin(sshPlugin);
+  registerWorkspacePlugin(secretsPlugin);
 
   pi.registerCommand("chat-workspace", {
     description: "Apply a named pi-chat workspace profile to the connected conversation",
